@@ -117,7 +117,7 @@ uint16_t cal_tcp_checksum(struct libnet_ipv4_hdr* iph, struct libnet_tcp_hdr* tc
   return checksum;
 }
 
-void make_tcp_rst(uint8_t *packet_s, struct tcp_structure *packet, int ip_len, int tcp_len, int tcp_sl, uint32_t way) {
+void make_tcp_rst(uint8_t *packet_s, struct tcp_structure *packet, int tcp_sl, uint32_t way) {
   
   uint32_t tcp_seq = htonl(ntohl(packet->tcp_hdr.th_seq) + tcp_sl);
 
@@ -162,7 +162,7 @@ void make_tcp_rst(uint8_t *packet_s, struct tcp_structure *packet, int ip_len, i
 
 }
 
-void make_tcp_fin(uint8_t *packet_s, struct tcp_structure *packet, int ip_len, int tcp_len, int tcp_sl) {
+void make_tcp_fin(uint8_t *packet_s, struct tcp_structure *packet, int tcp_sl) {
 
  
 
@@ -253,8 +253,8 @@ void find_data(pcap_t* handle, const uint8_t *packet, struct tcp_structure *tmp_
     	//dump(packet,header->caplen);
     	memcpy(tmp_packet1, packet, sizeof(tcp_structure));
     	memcpy(tmp_packet2, packet, sizeof(tcp_structure));
-    	make_tcp_rst(packet_sF, tmp_packet1, ip_len, tcp_len, tcp_sl, RST_FW);
-    	make_tcp_fin(packet_sB_fin, tmp_packet2, ip_len, tcp_len, tcp_sl);
+    	make_tcp_rst(packet_sF, tmp_packet1, tcp_sl, RST_FW);
+    	make_tcp_fin(packet_sB_fin, tmp_packet2, tcp_sl);
 
     	//printf("block packet dump\n");
     	//dump(packet_sB,sizeof(struct tcp_structure) + 8);		
@@ -272,8 +272,8 @@ void find_data(pcap_t* handle, const uint8_t *packet, struct tcp_structure *tmp_
       }
     }
     if (tmp == 0 ) {
-      make_tcp_rst(packet_sF, tmp_packet1, ip_len, tcp_len, tcp_sl, RST_FW);
-      make_tcp_rst(packet_sB, tmp_packet2, ip_len, tcp_len, tcp_sl, RST_BK);
+      make_tcp_rst(packet_sF, tmp_packet1, tcp_sl, RST_FW);
+      make_tcp_rst(packet_sB, tmp_packet2, tcp_sl, RST_BK);
 
       if(pcap_sendpacket(handle, packet_sF, sizeof(struct tcp_structure)) != 0)
         {perror("pcap_sendpacket"); free(packet_sF); free(packet_sB); pcap_close(handle); return;}   	
@@ -290,7 +290,6 @@ int main(int argc, char* argv[]) {
     usage();
     return -1;
   }
-
   char* dev = argv[1];
   char errbuf[PCAP_ERRBUF_SIZE];
 
