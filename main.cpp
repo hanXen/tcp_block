@@ -9,8 +9,8 @@
 //#include <netinet/tcp.h>
 
 #define IP_ADDR_LEN 4
-#define RST_FW 567
-#define RST_BK 678
+#define RST_FW 0
+#define RST_BK 1
 #define HEADER_LEN 54
 #define CARRY 65536
 
@@ -162,9 +162,7 @@ void make_tcp_rst(uint8_t *packet_s, struct tcp_structure *packet, int tcp_sl, u
 
 }
 
-void make_tcp_fin(uint8_t *packet_s, struct tcp_structure *packet, int tcp_sl) {
-
- 
+void make_tcp_fin(uint8_t *packet_s, struct tcp_structure *packet, int tcp_sl) { 
 
   int tcp_seq = htonl(ntohl(packet->tcp_hdr.th_seq) + tcp_sl);
   struct in_addr tmp_ip;
@@ -243,7 +241,6 @@ void find_data(pcap_t* handle, const uint8_t *packet, struct tcp_structure *tmp_
   ip_tcp_hl = ip_len + tcp_len;
   tcp_sl = ntohs(iph->ip_len) - ip_tcp_hl;
 
-
   if(tcph != NULL) {  
 
     body = (uint8_t*)(packet + sizeof(struct libnet_ethernet_hdr) + ip_tcp_hl);
@@ -284,7 +281,6 @@ void find_data(pcap_t* handle, const uint8_t *packet, struct tcp_structure *tmp_
   }  	
 }
 
-
 int main(int argc, char* argv[]) {
   if (argc != 2) {
     usage();
@@ -315,7 +311,6 @@ int main(int argc, char* argv[]) {
   struct tcp_structure *tmp_packet1 = (struct tcp_structure *) malloc(sizeof(struct tcp_structure));
   struct tcp_structure *tmp_packet2 = (struct tcp_structure *) malloc(sizeof(struct tcp_structure));
 
-
   while (true) {
     struct pcap_pkthdr* header;
     const uint8_t* packet;
@@ -343,4 +338,3 @@ int main(int argc, char* argv[]) {
   pcap_close(handle);
   return 0;
 }
-
