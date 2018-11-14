@@ -11,6 +11,8 @@
 #define IP_ADDR_LEN 4
 #define RST_FW 0
 #define RST_BK 1
+#define RST_LEN 0x0028
+#define FIN_LEN 0x002f
 #define HEADER_LEN 54
 #define CARRY 65536
 
@@ -91,7 +93,6 @@ uint16_t cal_ip_checksum(struct libnet_ipv4_hdr* iph) {
   return checksum;
 }
 
-
 uint16_t cal_tcp_checksum(struct libnet_ipv4_hdr* iph, struct libnet_tcp_hdr* tcph, int length){
   struct pseudo_header pseudo_hdr;
   memcpy(&pseudo_hdr.ip_src, &iph->ip_src, IP_ADDR_LEN);
@@ -134,7 +135,7 @@ void make_tcp_rst(uint8_t *packet_s, struct tcp_structure *packet, int tcp_sl, u
 
   memcpy(&packet->tcp_hdr.th_seq , &tcp_seq , 4);
 
-  packet->ip_hdr.ip_len = htons(0x0028);
+  packet->ip_hdr.ip_len = htons(RST_LEN);
   //memcpy(fake_mac, packet->eth_hdr.ether_dhost,ETHER_ADDR_LEN);
   //memcpy(&packet->eth_hdr.ether_shost, fake_mac, ETHER_ADDR_LEN);
   if(way == RST_BK) {
@@ -154,16 +155,14 @@ void make_tcp_rst(uint8_t *packet_s, struct tcp_structure *packet, int tcp_sl, u
   memcpy(packet->eth_hdr.ether_shost, attacker_mac, ETHER_ADDR_LEN);
   
   packet->ip_hdr.ip_sum = cal_ip_checksum(&packet->ip_hdr);
-  packet->tcp_hdr.th_sum = cal_tcp_checksum(&packet->ip_hdr, &packet->tcp_hdr, 40);
+  packet->tcp_hdr.th_sum = cal_tcp_checksum(&packet->ip_hdr, &packet->tcp_hdr, RST_LEN);
  
   memcpy(packet_s,packet,sizeof(struct tcp_structure));
   
   //dump(packet_s, sizeof(struct tcp_structure));
-
 }
 
 void make_tcp_fin(uint8_t *packet_s, struct tcp_structure *packet, int tcp_sl) { 
-
   int tcp_seq = htonl(ntohl(packet->tcp_hdr.th_seq) + tcp_sl);
   struct in_addr tmp_ip;
   uint32_t tmp_port;
@@ -176,7 +175,7 @@ void make_tcp_fin(uint8_t *packet_s, struct tcp_structure *packet, int tcp_sl) {
   packet->tcp_hdr.th_urp = 0;
 
   memcpy(&packet->tcp_hdr.th_seq , &tcp_seq , 4);
-  packet->ip_hdr.ip_len = htons(0x002f);
+  packet->ip_hdr.ip_len = htons(FIN_LEN);
 
   //memcpy(fake_mac, packet->eth_hdr.ether_dhost,ETHER_ADDR_LEN);
   //memcpy(&packet->eth_hdr.ether_shost, fake_mac, ETHER_ADDR_LEN);
@@ -204,8 +203,7 @@ void make_tcp_fin(uint8_t *packet_s, struct tcp_structure *packet, int tcp_sl) {
   struct libnet_ipv4_hdr *ip_hd = (struct libnet_ipv4_hdr*) (packet_s + sizeof(libnet_ethernet_hdr));
   struct libnet_tcp_hdr *tcp_hd = (struct libnet_tcp_hdr* ) (packet_s + sizeof(libnet_ethernet_hdr) + ip_hd->ip_hl * 4);
   ip_hd->ip_sum = cal_ip_checksum(ip_hd);
-  tcp_hd->th_sum = cal_tcp_checksum(ip_hd, tcp_hd, 47);
-   
+  tcp_hd->th_sum = cal_tcp_checksum(ip_hd, tcp_hd, FIN_LEN);
 }
 
 void packet_init(struct tcp_structure *tmp_packet1, struct tcp_structure *tmp_packet2, uint8_t *packet_sF, uint8_t *packet_sB, uint8_t *packet_sB_fin) {
@@ -242,11 +240,10 @@ void find_data(pcap_t* handle, const uint8_t *packet, struct tcp_structure *tmp_
   tcp_sl = ntohs(iph->ip_len) - ip_tcp_hl;
 
   if(tcph != NULL) {  
-
     body = (uint8_t*)(packet + sizeof(struct libnet_ethernet_hdr) + ip_tcp_hl);
     for(int i = 0; i < 6 ; i++) {
       if(strncmp((const char*)body,http_method[i],strlen(http_method[i])) == 0) {
-        //printf("packet dump\n");
+      //printf("packet dump\n");
     	//dump(packet,header->caplen);
     	memcpy(tmp_packet1, packet, sizeof(tcp_structure));
     	memcpy(tmp_packet2, packet, sizeof(tcp_structure));
@@ -268,7 +265,7 @@ void find_data(pcap_t* handle, const uint8_t *packet, struct tcp_structure *tmp_
     	break; 
       }
     }
-    if (tmp == 0 ) {
+    if (tmp == 0) {
       make_tcp_rst(packet_sF, tmp_packet1, tcp_sl, RST_FW);
       make_tcp_rst(packet_sB, tmp_packet2, tcp_sl, RST_BK);
 
